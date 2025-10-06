@@ -1,0 +1,43 @@
+pipeline {
+    agent any
+
+        environment {
+        JFROG_URL = 'https://triali5hfv3.jfrog.io/artifactory'
+        JFROG_REPO = 'docker-local'
+        IMAGE_NAME = 'demo-image'
+        IMAGE_TAG = '1.0'
+        CREDENTIALS_ID = 'jfrog-creds'
+        }
+        stages {
+            stage ('Checkout') {
+            steps {
+            git branch: "main", url: 'https://github.com/DeviVaraPrasadJ-dev/dockerimg-jfrog'
+            }
+            }
+
+            stage('Build Docker Image')  {
+            steps {
+            script {
+                docker build -t STMAGE NAME SIMAGE TAG
+            }
+            }
+            }
+
+            stage('Tag Docker Image for JFrog') {
+            steps {
+            script {
+            'docker tag $IMAGE_NAME:$IMAGE_TAG trialishfv3.jfrog.0/$JFROG_REPO/$IMAGE_NAME:$IMAGE_TAG'
+            }
+            }
+        }
+                    stage('Login to JFrog and Push') {
+                     steps {
+                    withCredentials([usernamePassword(credentialsId: "${CREDENTIALS_ID}", usernameVariable:'USERNAME', passwordVariable:'PASSWORD') ]) 
+                    {
+                    sh 'docker login -u #USERNAME -P $PASSWORD triali5hfv3.jfrog.io'
+                    sh 'docker push triali5hfv3.jfrog.io/$JFROG_REPO/$IMAGE_NAME:$IMAGE_TAG'
+                    }
+}
+}
+}
+}
