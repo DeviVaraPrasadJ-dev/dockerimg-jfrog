@@ -1,43 +1,58 @@
 pipeline {
     agent any
 
-        environment {
-        JFROG_URL = 'https://triali5hfv3.jfrog.io/artifactory'
-        JFROG_REPO = 'docker-local'
-        IMAGE_NAME = 'demo-image'
-        IMAGE_TAG = '1.0'
-        CREDENTIALS_ID = 'jfrog-creds'
-        }
-        stages {
-            stage ('Checkout') {
-            steps {
-            git branch: "main", url: 'https://github.com/DeviVaraPrasadJ-dev/dockerimg-jfrog.git'
-            }
-            }
+    environment {
+        REGISTRY_URL = 'devivaraprasadj.jfrog.io'
+        REPO = 'dockerimage'
+        IMAGE_NAME = 'myapp'
+        IMAGE_TAG = "v${BUILD_NUMBER}"
+    }
 
-            stage('Build Docker Image')  {
+    stages {
+        stage('Checkout Code') {
             steps {
-            script {
-                docker build -t STMAGE NAME SIMAGE TAG
-            }
-            }
-            }
-
-            stage('Tag Docker Image for JFrog') {
-            steps {
-            script {
-            'docker tag $IMAGE_NAME:$IMAGE_TAG trialishfv3.jfrog.0/$JFROG_REPO/$IMAGE_NAME:$IMAGE_TAG'
-            }
+                git branch: 'main', url: 'https://github.com/DeviVaraPrasadJ-dev/dockerimg-jfrog.git'
             }
         }
-                    stage('Login to JFrog and Push') {
-                     steps {
-                    withCredentials([usernamePassword(credentialsId: "${CREDENTIALS_ID}", usernameVariable:'USERNAME', passwordVariable:'PASSWORD') ]) 
-                    {
-                    sh 'docker login -u #USERNAME -P $PASSWORD triali5hfv3.jfrog.io'
-                    sh 'docker push triali5hfv3.jfrog.io/$JFROG_REPO/$IMAGE_NAME:$IMAGE_TAG'
-                    }
-}
-}
-}
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                  docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                """
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                sh """
+                  docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY_URL}/${REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+                """
+            }
+        }
+
+        stage('Push to JFrog') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'jfrog-cred',
+                    usernameVariable: 'JF_USER',
+                    passwordVariable: 'JF_TOKEN'
+                )]) {
+                    sh """
+                      echo "${JF_TOKEN}" | docker login ${REGISTRY_URL} -u "${JF_USER}" --password-stdin
+                      docker push ${REGISTRY_URL}/${REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+
+        stage('Cleanup Local Images') {
+            steps {
+                sh """
+                  docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true
+                  docker rmi ${REGISTRY_URL}/${REPO}/${IMAGE_NAME}:${IMAGE_TAG} || true
+                """
+            }
+        }
+    }
 }
