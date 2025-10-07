@@ -5,7 +5,7 @@ pipeline {
         REGISTRY_URL = 'devivaraprasadj.jfrog.io'
         REPO = 'dockerimage'
         IMAGE_NAME = 'myapp'
-        IMAGE_TAG = "v${BUILD_NUMBER}"
+        IMAGE_TAG = "v.${BUILD_NUMBER}"
     }
 
     stages {
